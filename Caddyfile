@@ -1,0 +1,49 @@
+(proxy_config) {
+  header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+  header_down Strict-Transport-Security max-age=31536000
+}
+
+(trusted_proxy_list) {
+  trusted_proxies 10.0.0.0/8 172.16.0.0/16 192.168.0.0/16 fc00::/7 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22
+  header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+}
+
+
+dcr.pathao.com {
+  @office_and_vpn {
+    # office ips
+    remote_ip forwarded 202.86.217.112/29 175.29.199.12/30 45.64.132.0/28 175.29.161.16/30 202.86.219.224/30
+
+    # officials vpn
+    remote_ip 35.236.174.157/32 35.234.22.198/32 35.189.191.20/32 35.236.167.48/32 35.185.155.34/32
+
+    remote_ip 35.229.220.146
+
+    # warden ip
+    remote_ip 34.80.64.17/32
+
+    # nepal
+    remote_ip 110.44.126.163 110.44.126.163/25 110.34.5.71/24
+  }
+
+  @not_admin {
+    not {
+      path /super_admin/*
+      path /monitoring/*
+      path /app/*
+      path /
+    }
+  }
+
+
+  reverse_proxy @not_admin http://rails1:3000 http://rails2:3000 http://rails3:3000 {
+    import trusted_proxy_list
+    import proxy_config
+  }
+
+  reverse_proxy @office_and_vpn http://rails4:3000 http://rails5:3000 http://rails6:3000 {
+    import trusted_proxy_list
+    import proxy_config
+  }
+
+}
