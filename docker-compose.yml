@@ -1,0 +1,109 @@
+version: '3'
+
+networks:
+  frontend:
+  backend:
+
+services:
+  caddy:
+    image: caddy:2.6.2
+    restart: unless-stopped
+    depends_on:
+      - rails1
+      - rails6
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./site:/srv
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - frontend
+      - backend
+
+  base: &base
+    restart: always
+    image: chatwoot/chatwoot:v2.15.0
+    env_file: .env
+    environment:
+      - INSTALLATION_ENV=docker
+      - NODE_ENV=production
+      - RAILS_ENV=production
+    volumes:
+      - ./data/storage:/app/storage
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  migration:
+    <<: *base
+    restart: on-failure
+    entrypoint: docker/entrypoints/rails.sh
+    command:  ['bundle', 'exec', 'rails', 'db:chatwoot_prepare']
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4096M
+
+  rails_base: &rails_base
+    <<: *base
+    entrypoint: docker/entrypoints/rails.sh
+    command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2048M
+    depends_on:
+      - migration
+
+  sidekiq_base: &sidekiq_base
+    <<: *base
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+    depends_on:
+      - migration
+
+
+  rails1:
+    <<: *rails_base
+    ports:
+      - 3000:3000
+
+  rails2:
+    <<: *rails_base
+
+  rails3:
+    <<: *rails_base
+
+  rails4:
+    <<: *rails_base
+
+  rails5:
+    <<: *rails_base
+
+  rails6:
+    <<: *rails_base
+
+  sidekiq1:
+    <<: *sidekiq_base
+
+  sidekiq2:
+    <<: *sidekiq_base
+
+  sidekiq3:
+    <<: *sidekiq_base
+
+  sidekiq4:
+    <<: *sidekiq_base
