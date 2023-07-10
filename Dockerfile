@@ -1,3 +1,3 @@
-FROM chatwoot/chatwoot:v2.17.1
+FROM chatwoot/chatwoot:v2.18.0
 RUN chmod +x docker/entrypoints/rails.sh
 ENTRYPOINT ["docker/entrypoints/rails.sh"]
